@@ -1,15 +1,15 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gocolly/colly/v2"
 )
 
-// Estructura para almacenar los datos climáticos
+// Estructura para los datos climáticos
 type Clima struct {
 	Localidad   string `json:"localidad"`
 	Temperatura string `json:"temperatura"`
@@ -20,16 +20,13 @@ type Clima struct {
 	Origen      string `json:"origen"`
 }
 
-func main() {
-	// URL de la página a scrapear
+// Función para obtener los datos climáticos mediante web scraping
+func obtenerClima() Clima {
 	url := "https://www.meteored.com.ar/tiempo-en_Bernal-America%2BSur-Argentina-Provincia%2Bde%2BBuenos%2BAires--1-13946.html"
-
-	// Crear un nuevo colector de scraping
 	c := colly.NewCollector()
 
-	// Estructura para almacenar los datos
 	clima := Clima{
-		Localidad: "Bernal, Buenos Aires", // Localidad fija
+		Localidad: "Bernal, Buenos Aires",
 		FechaHora: time.Now().Format("2006-01-02 15:04:05"),
 		Origen:    url,
 	}
@@ -39,30 +36,36 @@ func main() {
 		clima.Temperatura = strings.TrimSpace(e.Text)
 	})
 
-	// Extraer la humedad (última encontrada)
+	// Extraer la humedad
 	c.OnHTML("li.row img.iHum + span.datos strong", func(e *colly.HTMLElement) {
 		clima.Humedad = strings.TrimSpace(e.Text)
 	})
 
-	// Extraer el viento (última encontrada)
+	// Extraer el viento
 	c.OnHTML("span.velocidad.col span.changeUnitW:first-child", func(e *colly.HTMLElement) {
 		clima.Viento = strings.TrimSpace(e.Text) + " km/h"
 	})
 
-	// Extraer la presión atmosférica (última encontrada)
+	// Extraer la presión atmosférica
 	c.OnHTML("li.row img.iPres + span.datos strong", func(e *colly.HTMLElement) {
 		clima.Presion = strings.TrimSpace(e.Text)
 	})
 
-	// Visitar la página para extraer los datos
+	// Visitar la página para obtener los datos
 	c.Visit(url)
 
-	// Convertir la estructura en JSON
-	climaJSON, err := json.MarshalIndent(clima, "", "  ")
-	if err != nil {
-		return
-	}
+	return clima
+}
 
-	// Mostrar SOLO el JSON sin mensajes adicionales
-	fmt.Println(string(climaJSON))
+func main() {
+	r := gin.Default()
+
+	// Endpoint para obtener el clima
+	r.GET("/clima", func(c *gin.Context) {
+		clima := obtenerClima()
+		c.JSON(http.StatusOK, clima)
+	})
+
+	// Escuchar en el puerto 8080 (o el que necesite el servidor)
+	r.Run(":8080")
 }
