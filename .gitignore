@@ -1,0 +1,14 @@
+# Ignorar ejecutables compilados
+VerClima
+
+# Ignorar scripts personales
+subo.sh
+
+# Ignorar caché y archivos innecesarios de Go
+bin/
+pkg/
+*.exe
+*.log
+*.out
+*.mod
+*.sum
